@@ -12,14 +12,15 @@ pipeline {
             steps {
                 echo 'Building Docker Image'
 
-                bat 'docker build -t %DOCKER_IMAGE%:%IMAGE_TAG% .'
-                bat 'docker tag %DOCKER_IMAGE%:%IMAGE_TAG% %DOCKER_IMAGE%:latest'
+                sh '''
+                docker build -t $DOCKER_IMAGE:$IMAGE_TAG .
+                docker tag $DOCKER_IMAGE:$IMAGE_TAG $DOCKER_IMAGE:latest
+                '''
             }
         }
 
         stage('Docker Push') {
             steps {
-                echo 'Pushing Docker Image'
 
                 withCredentials([usernamePassword(
                     credentialsId: 'dockerhub-creds',
@@ -27,9 +28,12 @@ pipeline {
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
 
-                    bat 'docker login -u %DOCKER_USER% -p %DOCKER_PASS%'
-                    bat 'docker push %DOCKER_IMAGE%:%IMAGE_TAG%'
-                    bat 'docker push %DOCKER_IMAGE%:latest'
+                    sh '''
+                    echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+
+                    docker push $DOCKER_IMAGE:$IMAGE_TAG
+                    docker push $DOCKER_IMAGE:latest
+                    '''
                 }
             }
         }
