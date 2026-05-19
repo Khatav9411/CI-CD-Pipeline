@@ -15,6 +15,6 @@ spec:
     spec:
       containers:
         - name: simple-web-app
-          image: kamleshcloud/simple-web-app:5
+          image: kamleshcloud/simple-web-app:6
           ports:
             - containerPort: 80
