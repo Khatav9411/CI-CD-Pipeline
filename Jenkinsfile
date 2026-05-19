@@ -4,9 +4,6 @@ pipeline {
     environment {
         DOCKER_IMAGE = "kamleshcloud/simple-web-app"
         IMAGE_TAG = "${BUILD_NUMBER}"
-        KUBE_NAMESPACE = "simple-web-app"
-        DEPLOYMENT_NAME = "simple-web-app-deployment"
-        CONTAINER_NAME = "simple-web-app"
     }
 
     stages {
@@ -21,7 +18,6 @@ pipeline {
 
         stage('Docker Build') {
             steps {
-                echo 'Building Docker Image'
                 sh '''
                 docker build -t $DOCKER_IMAGE:$IMAGE_TAG .
                 docker tag $DOCKER_IMAGE:$IMAGE_TAG $DOCKER_IMAGE:latest
@@ -45,16 +41,25 @@ pipeline {
             }
         }
 
-        stage('Deploy to Kubernetes') {
+        stage('Update Kubernetes Manifest') {
             steps {
-                echo 'Deploying image to Kubernetes'
-                sh '''
-                kubectl set image deployment/$DEPLOYMENT_NAME \
-                $CONTAINER_NAME=$DOCKER_IMAGE:$IMAGE_TAG \
-                -n $KUBE_NAMESPACE
+                withCredentials([usernamePassword(
+                    credentialsId: 'github-token',
+                    usernameVariable: 'GIT_USER',
+                    passwordVariable: 'GIT_TOKEN'
+                )]) {
+                    sh '''
+                    sed -i "s|image: .*|image: $DOCKER_IMAGE:$IMAGE_TAG|g" k8s/deployment.yaml
 
-                kubectl rollout status deployment/$DEPLOYMENT_NAME -n $KUBE_NAMESPACE
-                '''
+                    git config user.name "jenkins"
+                    git config user.email "jenkins@example.com"
+
+                    git add k8s/deployment.yaml
+                    git commit -m "Update image tag to $IMAGE_TAG" || echo "No changes to commit"
+
+                    git push https://$GIT_USER:$GIT_TOKEN@github.com/Khatav9411/CI-CD-Pipeline.git HEAD:main
+                    '''
+                }
             }
         }
     }
