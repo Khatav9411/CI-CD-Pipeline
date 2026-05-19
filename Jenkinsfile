@@ -10,6 +10,15 @@ pipeline {
     }
 
     stages {
+        stage('SonarQube Scan') {
+            steps {
+                echo 'Running SonarQube Code Analysis'
+                withSonarQubeEnv('SonarQube') {
+                    sh 'sonar-scanner'
+                }
+            }
+        }
+
         stage('Docker Build') {
             steps {
                 echo 'Building Docker Image'
@@ -39,7 +48,6 @@ pipeline {
         stage('Deploy to Kubernetes') {
             steps {
                 echo 'Deploying image to Kubernetes'
-
                 sh '''
                 kubectl set image deployment/$DEPLOYMENT_NAME \
                 $CONTAINER_NAME=$DOCKER_IMAGE:$IMAGE_TAG \
